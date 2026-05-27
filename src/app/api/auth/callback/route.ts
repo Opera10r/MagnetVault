@@ -33,7 +33,38 @@ export async function GET(request: NextRequest) {
     if (!error) {
       return NextResponse.redirect(`${baseUrl}${next}`);
     }
+    return NextResponse.redirect(`${baseUrl}/login?error=${encodeURIComponent(error.message)}`);
   }
 
-  return NextResponse.redirect(`${baseUrl}/login?error=auth_failed`);
+  // Handle token_hash flow (magic links)
+  const token_hash = searchParams.get('token_hash');
+  const type = searchParams.get('type') as 'magiclink' | 'email' | null;
+  if (token_hash && type) {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {}
+          },
+        },
+      }
+    );
+    const { error } = await supabase.auth.verifyOtp({ token_hash, type });
+    if (!error) {
+      return NextResponse.redirect(`${baseUrl}${next}`);
+    }
+    return NextResponse.redirect(`${baseUrl}/login?error=${encodeURIComponent(error.message)}`);
+  }
+
+  return NextResponse.redirect(`${baseUrl}/login?error=no_code_or_token`);
 }
