@@ -33,7 +33,12 @@ export async function middleware(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.searchParams.delete('code');
       url.pathname = '/dashboard';
-      return NextResponse.redirect(url);
+      const redirectResponse = NextResponse.redirect(url);
+      // Copy auth cookies to the redirect response
+      supabaseResponse.cookies.getAll().forEach(cookie => {
+        redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
+      });
+      return redirectResponse;
     }
   }
 
