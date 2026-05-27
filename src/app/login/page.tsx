@@ -7,17 +7,23 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const supabase = createClient();
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOtp({
+    setError('');
+    const { error: authError } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/api/auth/callback` },
     });
     setLoading(false);
-    if (!error) setSent(true);
+    if (authError) {
+      setError(authError.message);
+    } else {
+      setSent(true);
+    }
   };
 
   const handleGoogleLogin = async () => {
@@ -86,6 +92,10 @@ export default function LoginPage() {
             {loading ? 'Sending...' : 'Send Magic Link'}
           </button>
         </form>
+
+        {error && (
+          <p className="text-center text-sm text-red-400">{error}</p>
+        )}
 
         <p className="text-center text-xs text-zinc-600">
           Free tier: 1 magnet, 50 subscribers/month. No credit card required.
